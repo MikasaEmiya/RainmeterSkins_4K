@@ -1,0 +1,50 @@
+[ScriptColorChanger]
+Measure=Script
+ScriptFile=#ROOTCONFIGPATH#ColorChanger
+MeasureBaseName=Audio
+MeterBaseName=
+MeterOption=BarColor
+hLowerLimit=#FirstBandIndex#
+hUpperLimit=(Max(2,#Bands#-1))
+hInvert=#Invert#
+hBlendingMultiplier=#hBlendingMultiplier#
+vBlendingMultiplier=#vBlendingMultiplier#
+OpacityLower=#OpacityLower#
+OpacityUpper=#OpacityUpper#
+OpacityMultiplier=#OpacityMultiplier#
+TransitionTime=#TransitionTime#
+DecayEffect=#DecayEffect#
+DecayThreshold=#DecayThreshold#
+DecaySustain=#DecaySustain#
+DecayDuration=#DecayDuration#
+DecayOpacityMin=#DecayOpacityMin#
+DecayOpacityMax=#DecayOpacityMax#
+ColorsExclude=#ColorsExclude#
+UpdateWhenZero=(#ModeKeyboard# = 1 || #MinBarHeight# <> 0 ? 1 : 0)
+
+[EnableColorTransition]
+Measure=String
+String=#Colors#
+IfMatch="Random"
+IfMatchAction=[!CommandMeasure ScriptColorChanger "enableTransition, enableHorizontalTransition = 1, 1"]
+IfMatch2="IndivRand"
+IfMatchAction2=[!CommandMeasure ScriptColorChanger "enableTransition = 1"]
+
+@Include=
+
+[SetColors]
+Measure=String
+String=#Colors#
+IfMatchMode=1
+IfMatch="Single"
+IfMatchAction=[!CommandMeasure ScriptColorChanger """local a = 1; for c in string.gmatch("#PaletteColor1#", "[^,]+") do for i = hLowerLimit, hUpperLimit do colorIdx[i][1][a], colorIdx[i][2][a] = c, c end; a = a + 1 end"""]
+IfMatch2="Random"
+IfMatchAction2=[!CommandMeasure ScriptColorChanger """for b = 1, 4 do repeat for a = 1, 3 do hColorIdx[b+4][a] = random(0, 255) end; until colorsExcludeStr == '' or Validate(hColorIdx[b+4]) ~= -1 end"""]
+IfMatch3="Custom|Wallpaper"
+IfMatchAction3=[!CommandMeasure ScriptColorChanger """for b = 1, 4 do local a = 1; for c in SKIN:GetVariable("PaletteColor" .. b):gmatch("[^,]+") do hColorIdx[b][a], hColorIdx[b+4][a], a = c, c, a + 1 end; end; HorizontalInterpolation()"""]
+IfMatch4="Individual"
+IfMatchAction4=[!CommandMeasure ScriptColorChanger """local a = 1; for c in string.gmatch("#PaletteColor1#", "[^,]+") do for i = hLowerLimit, hUpperLimit do colorIdx[i][1][a], colorIdx[i][2][a] = c, c end; a = a + 1 end; for i = hLowerLimit, hUpperLimit do local bar = SKIN:GetVariable(i-1); if bar ~= nil then local c = 1; for d in bar:gmatch("[^%|]+") do local a = 1; for e in d:gmatch("[^,]+") do colorIdx[#Invert# == 0 and i or (hLowerLimit + hUpperLimit - i)][c][a], a = e, a + 1 end; c = c + 1 end; end; end"""]
+IfMatch5="IndivRand"
+IfMatchAction5=[!CommandMeasure ScriptColorChanger """for i = hLowerLimit, hUpperLimit do repeat for a = 1, 3 do colorIdx[i][3][a] = random(0, 255) end until colorsExcludeStr == '' or Validate(colorIdx[i][3]) ~= -1; repeat for a = 1, 3 do colorIdx[i][4][a] = random(0, 255) end until colorsExcludeStr == '' or Validate(colorIdx[i][4]) ~= -1; end]
+IfMatch6="Window"
+IfMatchAction6=[!CommandMeasure ScriptColorChanger """local wHexColor=string.format('%x',[WindowColor]):sub(3) local a=1; for c=1,5,2 do local wColor=tonumber("0x"..wHexColor:sub(c,c+1)) for i=hLowerLimit,hUpperLimit do colorIdx[i][1][a],colorIdx[i][2][a] = wColor,wColor end; a=a+1 end"""]

@@ -1,0 +1,164 @@
+function Initialize()
+
+  local v = { }
+  
+  local match  = string.match
+  local gmatch = string.gmatch
+  local max    = math.max
+
+  for line in io.lines( SKIN:ReplaceVariables('#@#Variables.inc') ) do
+    local key,val = match(line,'^([%w_]+)%s-=%s-(.-)$')
+    v[key or ''] = val
+  end
+
+  local lRoot     = SKIN:GetVariable('ROOTCONFIGPATH')
+  local lCommon   = lRoot..v.SkinGroup
+  local lRotation = lRoot..'SkinRotation'
+  
+  local function SetKV(type,sec,key,val,dst)
+    SKIN:Bang(type,sec,key,val,dst)
+  end
+  local function SetFileKV(s,k,v,p)    SetKV('!WriteKeyValue',s,k,v,p)         end
+  local function SetLiveKV(s,k,d)      SetKV('!SetOption',s,k,d,v.Config)      end
+  local function SetLiveGroupKV(g,k,d) SetKV('!SetOptionGroup',g,k,d,v.Config) end
+
+
+  local keysAudio = { 'Port','ID','Channel','FFTAttack','FFTDecay','FreqMin','FreqMax','Sensitivity' }
+  for _,key in pairs(keysAudio) do
+    SetFileKV('Audio',key,v[key],lCommon)
+  end
+  
+  local keysAudioIntEven = { 'FFTSize','FFTBufferSize' }
+  for _,key in pairs(keysAudioIntEven) do
+    SetFileKV('Audio',key, v[key] + (v[key] % 2) ,lCommon)
+  end
+  
+  SetFileKV('Audio','Bands', max(2,v.Bands) ,lCommon)
+
+
+  local includes = {
+    '',
+    'SkinRotation',
+    'IndividualBarColors.inc',
+    'ColorChangerInc'
+  }
+  local actions = {
+    '[!UpdateMeasureGroup Audio][!UpdateMeterGroup Bars][!Redraw]',
+    '[!CommandMeasure ScriptColorChanger SetParent() "#ROOTCONFIG#"]',
+    '[!CommandMeasure ScriptColorChanger """AddChild("[CurrentConfig]","#Invert#"~=1 and 0 or 1)""" "#ROOTCONFIG#"]',
+    '[!CommandMeasure Initialize "NearestAxis = [NearestAxis]" "#ROOTCONFIG#\\Initialize"]',
+    '[!CommandMeasure Initialize """Matrix = "[Matrix]"""" "#ROOTCONFIG#\\Initialize"]',
+    '[!ActivateConfig "#ROOTCONFIG#\\Options"]'
+  }
+  local timer = -1
+
+  if v.Angle  == ''           then includes[2] = '' end
+  if v.Colors ~= 'Individual' then includes[3] = '' end
+  
+  if v.Colors == 'Wallpaper'  and true or (
+     v.Colors == 'Window'     and true or false)
+  then
+    timer = 4000
+    lColor = '#*ROOTCONFIGPATH*#GetColor'..v.Colors
+  end
+
+  if v.Colors      ~= 'Single'      and true or (
+     v.DecayEffect ~= '0'           and true or (
+     v.OpacityMin  ~= v.OpacityMax  and true or false))
+  then
+    actions[1] = actions[1]..'[!UpdateMeasure ScriptColorChanger]'
+
+    if v.Config ~= SKIN:GetVariable('ROOTCONFIG') then
+      actions[2] = ''
+    end
+  else
+    includes[4], actions[2], actions[3] = '','',''
+  end
+
+
+  for i=2,#includes do
+    SetFileKV('Include','@Include'..i,includes[i],lCommon)
+    if includes[i] ~= '' then includes[1] = '#*@*#Variables.inc' end
+  end
+
+  SetFileKV('\\',       '@Include3',      includes[1],'#ROOTCONFIGPATH#Fountain of Colors.ini')
+  SetFileKV('Rainmeter','Update',         timer,      lCommon)
+  SetFileKV('Rainmeter','ContextAction',  actions[6], lCommon)
+  SetFileKV('Rainmeter','OnRefreshAction','',         lCommon)
+  SetFileKV('Audio',    'OnUpdateAction', actions[1], lCommon)
+
+  SetFileKV('EnableColorTransition','@Include',          lColor,    '#ROOTCONFIGPATH#ColorChangerInc')
+  SetFileKV('Variables',            'SetCloneColorState',actions[3],'#@#Variables.inc')
+  SetFileKV('NearestAxis',          'OnUpdateAction',    actions[4],lRotation)
+  SetFileKV('Matrix',               'OnUpdateAction',    actions[5],lRotation)
+
+  SKIN:Bang('!DeactivateConfig',v.Config)
+  NearestAxis = 0
+
+
+  SKIN:Bang('!ActivateConfig',v.Config)
+  SKIN:Bang(actions[2])
+
+  local lowerLimit = 1 + v.FirstBandIndex
+  local upperLimit = 1 + max(2, v.Bands-1)
+  for i=lowerLimit,upperLimit do
+
+    SetLiveKV(i-1,         'Group','Bars')
+    SetLiveKV('Audio'..i-1,'Group','Audio')
+    
+    if v.MinBarHeight ~= '0' and true or (
+       v.ModeKeyboard ~= '0' and true or false)
+    then
+      SetLiveKV('Calc'..i-1,     'Group',    'Audio')
+      SKIN:Bang('!UpdateMeasure','Calc'..i-1,v.Config)
+    end
+
+    SetLiveKV(i-1, NearestAxis == 0 and 'X' or 'Y' , (v.BarWidth + v.BarGap) * (i-lowerLimit) )
+    SetLiveKV('Audio'..i-1,'BandIdx', v.Invert == '' and i-1 or lowerLimit + upperLimit - i-1 )
+
+    SKIN:Bang('!UpdateMeter',  i-1,         v.Config)
+    SKIN:Bang('!UpdateMeasure','Audio'..i-1,v.Config)
+  end
+
+  local kvBar = {
+    W        = NearestAxis == 0 and v.BarWidth  or v.BarHeight, 
+    H        = NearestAxis == 0 and v.BarHeight or v.BarWidth,
+    BarColor = v.PaletteColor1
+  }
+  for key,val in pairs(kvBar) do SetLiveGroupKV('Bars',key,val) end
+
+  if v.Angle ~= '' then
+    local kvBarAngle = {
+      AntiAlias            = 1,
+      TransformationMatrix = Matrix,
+      BarOrientation       = NearestAxis == 0 and 'Vertical' or 'Horizontal'
+    }
+    for key,val in pairs(kvBarAngle) do SetLiveGroupKV('Bars',key,val) end
+  end
+  
+  if v.AverageSize ~= ''          then SetLiveGroupKV('Audio','AverageSize',v.AverageSize) end
+  if v.Colors      == 'Wallpaper' then SKIN:Bang('!CommandMeasure','MeasureRun','Run',v.Config) end
+
+
+  SetFileKV('NearestAxis','OnUpdateAction','',lRotation)
+  SetFileKV('Matrix',     'OnUpdateAction','',lRotation)
+  SetFileKV('Include',    '@Include2',     '',lCommon)
+  SetFileKV('Include',    '@Include3',     '',lCommon)
+  
+  local i=1
+  local actionsLocal = { }
+  local keysLocal    = { 'Angle','Invert','Channel','Port','ID' }
+  local partsLocal   = { '[!WriteKeyValue Variables ',' "#*','*#" "#*@*#Variables.inc"]' }
+  for _,key in pairs(keysLocal) do
+    actionsLocal[i], actionsLocal[i+2], actionsLocal[i+4] =
+    partsLocal[1],   partsLocal[2],     partsLocal[3]
+
+    actionsLocal[i+1], actionsLocal[i+3] = key,key
+    i=i+5
+  end
+  actionsLocal[#actionsLocal+1] = '[!WriteKeyValue Variables Config "#*CURRENTCONFIG*#" "#*@*#Variables.inc"]'
+  actionsLocal[#actionsLocal+1] = '[!ActivateConfig "#ROOTCONFIG#\\Initialize"]'
+  SetFileKV('Rainmeter','OnRefreshAction',table.concat(actionsLocal),lCommon)
+
+  SKIN:Bang('!DeactivateConfig')
+end
