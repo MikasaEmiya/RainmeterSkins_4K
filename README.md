@@ -16,6 +16,8 @@
 
 ![](https://emiya.oss-cn-shanghai.aliyuncs.com/%E6%9B%B4%E6%94%B9%E6%89%80%E6%9C%89%E7%94%A8%E6%88%B7%E7%9A%84%E8%AE%BE%E7%BD%AE.png)
 
+
+
 3、更改高DPI设置
 
 ![](https://emiya.oss-cn-shanghai.aliyuncs.com/%E6%9B%B4%E6%94%B9%E9%AB%98DPI%E8%AE%BE%E7%BD%AE.png)
