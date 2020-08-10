@@ -18,7 +18,7 @@ FFTDecay=0
 Bands=80
 FreqMin=27.5
 FreqMax=24000 
-Sensitivity=35.873952292857
+Sensitivity=38.5951825133952
 Type=BufferStatus
 OnUpdateAction=[!UpdateMeasureGroup Audio][!UpdateMeterGroup Bars][!Redraw]
 
